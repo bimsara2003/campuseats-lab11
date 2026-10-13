@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: campuseats-api
+    runtime: docker
+    plan: free
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FrontendOrigins
+        value: https://campuseats-lab11-ten.vercel.app
+      - key: RequireDatabase
+        value: "true"
+      - key: ConnectionStrings__Default
+        sync: false

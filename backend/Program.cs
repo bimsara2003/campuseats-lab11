@@ -5,11 +5,21 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 var origins = (builder.Configuration["FrontendOrigins"] ?? "http://localhost:5173").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
 var connection = builder.Configuration.GetConnectionString("Default");
+if (builder.Configuration.GetValue<bool>("RequireDatabase") && string.IsNullOrWhiteSpace(connection))
+    throw new InvalidOperationException("ConnectionStrings__Default is required for this deployment.");
 if (!string.IsNullOrWhiteSpace(connection)) builder.Services.AddDbContext<MenuDb>(o => o.UseNpgsql(connection));
 var app = builder.Build();
 app.UseCors("Frontend");
 app.Use(async (context, next) => { await next(); app.Logger.LogInformation("{Method} {Path} responded {Status}", context.Request.Method, context.Request.Path, context.Response.StatusCode); });
 app.MapGet("/health", () => Results.Ok(new { status = "ok", service = "CampusEats.Api" }));
+app.MapGet("/health/ready", async (IServiceProvider services) => {
+    if (string.IsNullOrWhiteSpace(connection)) return Results.Ok(new { status = "ok", dataSource = "demo" });
+    try {
+        var db = services.GetRequiredService<MenuDb>();
+        var count = await db.MenuItems.CountAsync();
+        return Results.Ok(new { status = "ok", dataSource = "postgresql", menuItems = count });
+    } catch { return Results.Problem("Database not ready.", statusCode: 503); }
+});
 app.MapGet("/api/menu", async (IServiceProvider services) => {
     if (string.IsNullOrWhiteSpace(connection)) return Results.Ok(Seed.Items);
     try { var db = services.GetRequiredService<MenuDb>(); return Results.Ok(await db.MenuItems.AsNoTracking().OrderBy(x => x.Id).ToListAsync()); }
