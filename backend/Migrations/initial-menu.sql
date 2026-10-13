@@ -1,4 +1,4 @@
-﻿CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
     "MigrationId" character varying(150) NOT NULL,
     "ProductVersion" character varying(32) NOT NULL,
     CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
@@ -62,4 +62,6 @@ BEGIN
 END $EF$;
 COMMIT;
 
-ALTER TABLE public."MenuItems" ENABLE ROW LEVEL SECURITY;`nALTER TABLE public."__EFMigrationsHistory" ENABLE ROW LEVEL SECURITY;`nREVOKE ALL ON TABLE public."MenuItems", public."__EFMigrationsHistory" FROM anon, authenticated;
+ALTER TABLE public."MenuItems" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."__EFMigrationsHistory" ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public."MenuItems", public."__EFMigrationsHistory" FROM anon, authenticated;
