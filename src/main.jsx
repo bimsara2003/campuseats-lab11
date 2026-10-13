@@ -1,0 +1,31 @@
+import React, {useEffect, useState} from 'react';
+import {createRoot} from 'react-dom/client';
+import './style.css';
+
+const samples = [
+ {id:1,name:'Chicken rice bowl',category:'Meals',price:650,description:'Grilled chicken, fragrant rice and a bright garden salad.',emoji:'🍛',tag:'Campus favourite'},
+ {id:2,name:'Veggie power bowl',category:'Meals',price:520,description:'Roasted vegetables, chickpeas and fresh greens.',emoji:'🥗',tag:'Vegetarian'},
+ {id:3,name:'Classic chicken burger',category:'Snacks',price:480,description:'A toasted bun, crispy chicken and our house sauce.',emoji:'🍔',tag:'Quick bite'},
+ {id:4,name:'Cheese and tomato toast',category:'Snacks',price:320,description:'Golden toast with melted cheese and ripe tomatoes.',emoji:'🥪',tag:'Vegetarian'},
+ {id:5,name:'Iced lime cooler',category:'Drinks',price:220,description:'Fresh lime, a little sweetness and plenty of ice.',emoji:'🍋',tag:'Refreshing'},
+ {id:6,name:'Cold brew coffee',category:'Drinks',price:350,description:'Smooth, slow-brewed coffee for your next lecture.',emoji:'☕',tag:'Study fuel'}
+];
+const money = n => `LKR ${n.toLocaleString('en-LK')}`;
+function App(){
+ const [menu,setMenu]=useState(samples),[status,setStatus]=useState('Loading menu…'),[category,setCategory]=useState('All'),[search,setSearch]=useState(''),[cart,setCart]=useState({}),[open,setOpen]=useState(false),[message,setMessage]=useState('');
+ useEffect(()=>{const controller=new AbortController();const base=import.meta.env.VITE_API_URL;
+ if(!base){setStatus('Demo menu • API not configured');return;}
+ const timeout=setTimeout(()=>controller.abort(),10000);
+ fetch(`${base.replace(/\/$/,'')}/api/menu`,{signal:controller.signal}).then(r=>{if(!r.ok)throw Error('Menu unavailable');return r.json();}).then(data=>{if(!Array.isArray(data)||!data.every(x=>typeof x.name==='string'&&typeof x.price==='number'&&x.id))throw Error('Invalid menu');setMenu(data);setStatus('Connected to CampusEats API');}).catch(()=>setStatus('Demo menu • live API unavailable')).finally(()=>clearTimeout(timeout));
+ return ()=>{clearTimeout(timeout);controller.abort();};},[]);
+ const count=Object.values(cart).reduce((a,b)=>a+b,0),total=menu.reduce((s,m)=>s+m.price*(cart[m.id]||0),0);
+ const add=id=>{setCart(c=>({...c,[id]:(c[id]||0)+1}));setMessage('Added to your pickup list');};
+ const shown=menu.filter(m=>(category==='All'||m.category===category)&&`${m.name} ${m.description}`.toLowerCase().includes(search.toLowerCase()));
+ return <><header><a className="brand" href="#">✳ <span>CampusEats</span></a><nav><a href="#menu">Explore menu</a><a href="#how">How it works</a></nav><button className="cart" onClick={()=>setOpen(!open)}>Your list <span>{count}</span></button></header>
+ <main><section className="hero"><div><p className="eyebrow">MADE FOR CAMPUS LIFE</p><h1>Good food.<br/>Between <em>lectures.</em></h1><p className="intro">Your next favourite meal is just around the corner. Explore fresh campus bites, skip the guesswork and make your break count.</p><a className="primary" href="#menu">Find your next bite <span>↗</span></a><div className="hero-note"><span>✦ Freshly prepared</span><span>✦ Student friendly prices</span></div></div><div className="hero-art"><div className="orbit">FRESH FOOD · GOOD MOOD · CAMPUS EATS ·</div><div className="plate">🥗</div><div className="floating">A little break.<br/><strong>A lot of flavour.</strong></div><span className="art-label">YOUR DAILY DOSE OF DELICIOUS</span></div></section>
+ <section id="menu"><div className="section-head"><div><p className="eyebrow">THE CAMPUS MENU</p><h2>What are you craving?</h2></div><p className="status">● {status}</p></div><div className="tools"><div className="filters">{['All','Meals','Snacks','Drinks'].map(c=><button key={c} aria-pressed={category===c} className={category===c?'selected':''} onClick={()=>setCategory(c)}>{c}</button>)}</div><input aria-label="Search menu" placeholder="Search something delicious…" value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="grid">{shown.map(m=><article key={m.id}><div className={`food ${m.category.toLowerCase()}`}><span className="tag">{m.tag||m.category}</span><span className="emoji" aria-hidden="true">{m.emoji||'🍽️'}</span></div><div className="details"><p className="category">{m.category}</p><h3>{m.name}</h3><p>{m.description}</p><div className="card-bottom"><strong>{money(m.price)}</strong><button aria-label={`Add ${m.name}`} onClick={()=>add(m.id)}>+</button></div></div></article>)}</div>{shown.length===0&&<p className="empty">No matching bites. Try another search or category.</p>}</section>
+ <section className="how" id="how"><div><p className="eyebrow">LESS PLANNING MORE ENJOYING</p><h2>Your break, sorted.</h2></div><div><b>01</b><h3>Find your favourite</h3><p>Browse meals, snacks and drinks.</p></div><div><b>02</b><h3>Make a pickup list</h3><p>Add your picks and see the total.</p></div><div><b>03</b><h3>Head to the canteen</h3><p>Show your list and order at the counter.</p></div></section></main>
+ <footer><span className="brand">✳ CampusEats</span><p>Made for better campus breaks.</p><small>SE3090 Lab 11 · Demonstration application · No online payment or order submission</small></footer><p className="sr-only" role="status">{message}</p>
+ {open&&<div className="overlay"><section className="drawer" aria-label="Your pickup list"><div className="section-head"><h2>Your pickup list</h2><button onClick={()=>setOpen(false)} aria-label="Close pickup list">✕</button></div><p>This is a planning list. Place your order at the canteen counter.</p>{count===0?<p className="empty">Your next bite is waiting. Add something from the menu.</p>:menu.filter(m=>cart[m.id]).map(m=><div className="cart-row" key={m.id}><span>{m.emoji} {m.name}<small>{money(m.price)}</small></span><div><button aria-label={`Remove one ${m.name}`} onClick={()=>setCart(c=>({...c,[m.id]:Math.max(0,c[m.id]-1)}))}>−</button><b>{cart[m.id]}</b><button aria-label={`Add one ${m.name}`} onClick={()=>add(m.id)}>+</button></div></div>)}<div className="total"><span>Estimated total</span><strong>{money(total)}</strong></div><button className="primary" onClick={()=>setOpen(false)}>Keep exploring ↗</button></section></div>}</>;
+}
+createRoot(document.getElementById('root')).render(<App/>);
